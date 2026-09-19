@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  /* Night transit map — deep charcoal-navy, not paper. */
+  --night: #0e1116;
+  --night-line: #262c35;
+
+  /* Platform signage white/slate. */
+  --platform: #e8eaed;
+  --platform-soft: #8b93a1;
+
+  /* Two ends of a balance, still color-coded, but tuned to read on dark:
+     a hot signal-red line for what you owe, a transit-green line for what
+     you're owed. */
+  --debit: #ff6b5b;
+  --credit: #4cd9a0;
+
+  /* Departure-board amber — spent in exactly one place: the primary action. */
+  --signal: #ffc53d;
+  --signal-ink: #241902;
+}
+
+@theme inline {
+  --color-night: var(--night);
+  --color-night-line: var(--night-line);
+  --color-platform: var(--platform);
+  --color-platform-soft: var(--platform-soft);
+  --color-debit: var(--debit);
+  --color-credit: var(--credit);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-metro-mono);
+}
+
+body {
+  background: var(--night);
+  color: var(--platform);
+  font-family: var(--font-display), system-ui, sans-serif;
+  background-image: radial-gradient(circle at 1px 1px, var(--night-line) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* A closed interchange line under a settled total. */
+.map-total {
+  border-top: 1px solid var(--night-line);
+  border-bottom: 2px solid var(--platform);
+}
