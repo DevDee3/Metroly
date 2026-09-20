@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { formatEther, parseEther } from "viem";
-import { useAccount, useChainId, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { useAccount, useBalance, useChainId, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { ConnectButton } from "@/components/ConnectButton";
 import { groupVaultContract, GROUP_VAULT_ADDRESS } from "@/lib/contract";
 import { useKnownGroups } from "@/lib/useKnownGroups";
@@ -27,6 +27,11 @@ function parseMonAmount(value: string): bigint {
   return amount;
 }
 
+function formatMon(amount: bigint): string {
+  const [whole, fraction] = formatEther(amount).split(".");
+  return fraction ? `${whole}.${fraction.slice(0, 4)}` : whole;
+}
+
 function friendlyError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
   const message = error.message;
@@ -44,6 +49,7 @@ export default function GroupPage() {
   const chainId = useChainId();
   const publicClient = usePublicClient();
   const { switchChain } = useSwitchChain();
+  const walletBalance = useBalance({ address, chainId: monadTestnet.id, query: { enabled: !!address } });
   const { remember } = useKnownGroups();
   const { writeContractAsync } = useWriteContract();
 
@@ -93,6 +99,7 @@ export default function GroupPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [transactionStatus, setTransactionStatus] = useState<string | null>(null);
 
   async function refetchAll() {
     await Promise.all([
@@ -104,7 +111,7 @@ export default function GroupPage() {
   async function shareGroup() {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      setShareMessage("Invite link copied");
+      setShareMessage("Group link copied");
     } catch {
       setShareMessage("Copy failed — share the page URL manually");
     }
@@ -116,12 +123,18 @@ export default function GroupPage() {
       setError(notDeployed ? "The contract is not configured yet." : wrongNetwork ? "Switch to Monad Testnet first." : "Connect a wallet first.");
       return;
     }
+    if (["settle", "withdraw", "surplus"].includes(label) && !window.confirm("Confirm this fund transfer in your wallet?")) {
+      return;
+    }
     setBusy(label);
     setError(null);
+    setTransactionStatus("Waiting for wallet approval…");
     try {
       const hash = await fn();
+      setTransactionStatus("Transaction submitted. Waiting for confirmation…");
       await publicClient.waitForTransactionReceipt({ hash });
       await refetchAll();
+      setTransactionStatus("Transaction confirmed.");
       if (label === "deposit") setDepositAmount("");
       if (label === "expense") {
         setExpenseDesc("");
@@ -132,8 +145,10 @@ export default function GroupPage() {
       if (label === "surplus") setSurplusAmount("");
     } catch (err) {
       setError(friendlyError(err, "Transaction failed."));
+      setTransactionStatus(null);
     } finally {
       setBusy(null);
+      window.setTimeout(() => setTransactionStatus(null), 3000);
     }
   }
 
@@ -154,6 +169,11 @@ export default function GroupPage() {
         </Link>
         <ConnectButton />
       </header>
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-platform-soft">
+        <span className="border border-signal/40 px-2 py-1 text-signal">MONAD TESTNET</span>
+        {address && <span>Wallet: {walletBalance.data ? `${formatMon(walletBalance.data.value)} MON` : "loading…"}</span>}
+      </div>
 
       {notDeployed ? (
         <p className="text-debit">This app has not been connected to a deployed vault contract yet.</p>
@@ -244,14 +264,18 @@ export default function GroupPage() {
           </section>
 
           {/* Your position */}
-          <section className="mb-10 grid grid-cols-2 gap-4 font-mono text-sm">
+          <section className="mb-10 grid gap-4 font-mono text-sm sm:grid-cols-3">
+            <div className="border border-night-line p-3">
+              <p className="text-platform-soft mb-1">wallet balance</p>
+              <p className="text-lg whitespace-nowrap">{walletBalance.data ? formatMon(walletBalance.data.value) : "—"} MON</p>
+            </div>
             <div className="border border-night-line p-3">
               <p className="text-platform-soft mb-1">your vault balance</p>
-              <p className="text-lg">{myVaultBalance.data !== undefined ? formatEther(myVaultBalance.data) : "—"} MON</p>
+              <p className="text-lg whitespace-nowrap">{myVaultBalance.data !== undefined ? formatMon(myVaultBalance.data) : "—"} MON</p>
             </div>
             <div className="border border-night-line p-3">
               <p className="text-platform-soft mb-1">withdrawable</p>
-              <p className="text-lg">{myWithdrawable.data !== undefined ? formatEther(myWithdrawable.data) : "—"} MON</p>
+              <p className="text-lg whitespace-nowrap">{myWithdrawable.data !== undefined ? formatMon(myWithdrawable.data) : "—"} MON</p>
             </div>
           </section>
 
@@ -274,6 +298,7 @@ export default function GroupPage() {
           </section>
 
           {error && <p className="text-sm text-debit mb-4">{error}</p>}
+          {transactionStatus && <p className="text-sm text-platform mb-4">{transactionStatus}</p>}
 
           {/* Deposit */}
           <section className="mb-10">

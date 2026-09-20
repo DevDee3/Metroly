@@ -2,17 +2,21 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useChainId, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
-import { decodeEventLog } from "viem";
+import { decodeEventLog, parseAbiItem } from "viem";
 import { ConnectButton } from "@/components/ConnectButton";
 import { groupVaultContract, GROUP_VAULT_ADDRESS } from "@/lib/contract";
 import { GROUP_VAULT_ABI } from "@/lib/groupVaultAbi";
 import { useKnownGroups } from "@/lib/useKnownGroups";
 import { monadTestnet } from "@/lib/chains";
+
+const GROUP_CREATED_EVENT = parseAbiItem(
+  "event GroupCreated(uint256 indexed groupId, string name, address indexed creator, address[] members)"
+);
 
 function friendlyError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
@@ -37,9 +41,40 @@ export default function Home() {
   const [membersInput, setMembersInput] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [discovering, setDiscovering] = useState(false);
   const notDeployed = GROUP_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000";
   const wrongNetwork = !!address && chainId !== monadTestnet.id;
+
+  useEffect(() => {
+    if (!address || !publicClient || notDeployed || wrongNetwork) return;
+
+    let cancelled = false;
+    async function discoverGroups() {
+      setDiscovering(true);
+      try {
+        const logs = await publicClient!.getLogs({ address: GROUP_VAULT_ADDRESS, event: GROUP_CREATED_EVENT });
+        for (const log of logs) {
+          try {
+            const decoded = decodeEventLog({ abi: GROUP_VAULT_ABI, ...log });
+            if (decoded.eventName !== "GroupCreated") continue;
+            const args = decoded.args as { groupId: bigint; creator: string; members: readonly string[] };
+            const isMember = args.creator.toLowerCase() === address.toLowerCase() ||
+              args.members.some((member) => member.toLowerCase() === address.toLowerCase());
+            if (isMember && !cancelled) remember(Number(args.groupId));
+          } catch {
+            // Ignore logs emitted by other contracts or unrelated events.
+          }
+        }
+      } catch {
+        // Discovery is best-effort; local groups and direct links still work.
+      } finally {
+        if (!cancelled) setDiscovering(false);
+      }
+    }
+    void discoverGroups();
+    return () => { cancelled = true; };
+  }, [address, notDeployed, publicClient, remember, wrongNetwork]);
+
   const canCreate = authenticated && !!address && !notDeployed && !wrongNetwork && !creating;
 
   async function handleCreate(e: React.FormEvent) {
@@ -123,7 +158,10 @@ export default function Home() {
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-6 py-12">
       <header className="flex items-baseline justify-between border-b border-night-line pb-4 mb-10">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Metroly</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Metroly</h1>
+          <span className="border border-signal/40 px-2 py-1 text-[10px] font-mono text-signal">TESTNET</span>
+        </div>
         <ConnectButton />
       </header>
 
@@ -189,6 +227,7 @@ export default function Home() {
 
           <section>
             <h2 className="font-display text-lg font-semibold mb-4">Your groups</h2>
+            {discovering && <p className="text-xs text-platform-soft mb-3">Finding your groups onchain…</p>}
             {groupIds.length === 0 ? (
               <p className="text-sm text-platform-soft">No groups yet on this device.</p>
             ) : (
