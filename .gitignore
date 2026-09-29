@@ -8,4 +8,5 @@ cache/
 out/
 broadcast/
 .env
-lib/
+/lib/
+contracts/lib/
