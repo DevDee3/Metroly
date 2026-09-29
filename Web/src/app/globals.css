@@ -29,14 +29,14 @@
   --color-credit: var(--credit);
   --color-signal: var(--signal);
   --color-signal-ink: var(--signal-ink);
-  --font-display: var(--font-space-grotesk);
-  --font-mono: var(--font-metro-mono);
+  --font-display: Arial, Helvetica, sans-serif;
+  --font-mono: "Courier New", Courier, monospace;
 }
 
 body {
   background: var(--night);
   color: var(--platform);
-  font-family: var(--font-display), system-ui, sans-serif;
+  font-family: Arial, Helvetica, sans-serif;
   background-image: radial-gradient(circle at 1px 1px, var(--night-line) 1px, transparent 0);
   background-size: 24px 24px;
 }

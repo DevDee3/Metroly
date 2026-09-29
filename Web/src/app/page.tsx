@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePrivy } from "@privy-io/react-auth";
 import { useAccount, useChainId, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
-import { decodeEventLog, parseAbiItem } from "viem";
+import { decodeEventLog, encodeFunctionData, parseAbiItem, type Hex } from "viem";
+import { useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { ConnectButton } from "@/components/ConnectButton";
 import { groupVaultContract, GROUP_VAULT_ADDRESS } from "@/lib/contract";
 import { GROUP_VAULT_ABI } from "@/lib/groupVaultAbi";
@@ -17,6 +18,7 @@ import { monadTestnet } from "@/lib/chains";
 const GROUP_CREATED_EVENT = parseAbiItem(
   "event GroupCreated(uint256 indexed groupId, string name, address indexed creator, address[] members)"
 );
+const sponsorTransactions = process.env.NEXT_PUBLIC_PRIVY_SPONSOR_TRANSACTIONS === "true";
 
 function friendlyError(error: unknown, fallback: string): string {
   if (!(error instanceof Error)) return fallback;
@@ -28,12 +30,14 @@ function friendlyError(error: unknown, fallback: string): string {
 }
 
 export default function Home() {
-  const { authenticated } = usePrivy();
+  const { authenticated, login } = usePrivy();
   const { address } = useAccount();
   const chainId = useChainId();
   const publicClient = usePublicClient();
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
+  const { sendTransaction } = useSendTransaction();
+  const { wallets } = useWallets();
   const { groupIds, remember } = useKnownGroups();
   const router = useRouter();
 
@@ -47,6 +51,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!address || !publicClient || notDeployed || wrongNetwork) return;
+    const connectedAddress = address;
 
     let cancelled = false;
     async function discoverGroups() {
@@ -58,8 +63,8 @@ export default function Home() {
             const decoded = decodeEventLog({ abi: GROUP_VAULT_ABI, ...log });
             if (decoded.eventName !== "GroupCreated") continue;
             const args = decoded.args as { groupId: bigint; creator: string; members: readonly string[] };
-            const isMember = args.creator.toLowerCase() === address.toLowerCase() ||
-              args.members.some((member) => member.toLowerCase() === address.toLowerCase());
+            const isMember = args.creator.toLowerCase() === connectedAddress.toLowerCase() ||
+              args.members.some((member) => member.toLowerCase() === connectedAddress.toLowerCase());
             if (isMember && !cancelled) remember(Number(args.groupId));
           } catch {
             // Ignore logs emitted by other contracts or unrelated events.
@@ -76,6 +81,31 @@ export default function Home() {
   }, [address, notDeployed, publicClient, remember, wrongNetwork]);
 
   const canCreate = authenticated && !!address && !notDeployed && !wrongNetwork && !creating;
+
+  async function createGroupTransaction(groupName: string, members: readonly `0x${string}`[]): Promise<Hex> {
+    const embeddedWallet = address && wallets.some((wallet) =>
+      wallet.address.toLowerCase() === address.toLowerCase() &&
+      (wallet.walletClientType === "privy" || wallet.walletClientType === "privy-v2")
+    );
+    if (sponsorTransactions && embeddedWallet && address) {
+      const data = encodeFunctionData({
+        abi: groupVaultContract.abi,
+        functionName: "createGroup",
+        args: [groupName, members],
+      });
+      const result = await sendTransaction(
+        { to: GROUP_VAULT_ADDRESS, chainId: monadTestnet.id, data },
+        { sponsor: true, address },
+      );
+      return result.hash;
+    }
+
+    return writeContractAsync({
+      ...groupVaultContract,
+      functionName: "createGroup",
+      args: [groupName, members],
+    });
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -120,11 +150,7 @@ export default function Home() {
         setError("Connect a wallet on Monad Testnet before creating a group.");
         return;
       }
-      const hash = await writeContractAsync({
-        ...groupVaultContract,
-        functionName: "createGroup",
-        args: [name.trim(), others as `0x${string}`[]],
-      });
+      const hash = await createGroupTransaction(name.trim(), others as `0x${string}`[]);
 
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
@@ -156,11 +182,10 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-6 py-12">
-      <header className="flex items-baseline justify-between border-b border-night-line pb-4 mb-10">
+    <main className="min-h-screen max-w-3xl mx-auto px-6 py-8 sm:py-12 lg:py-20">
+      <header className="flex items-center justify-between border-b border-night-line pb-5">
         <div className="flex items-center gap-3">
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Metroly</h1>
-          <span className="border border-signal/40 px-2 py-1 text-[10px] font-mono text-signal">TESTNET</span>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Metroly</h1>
         </div>
         <ConnectButton />
       </header>
@@ -182,12 +207,31 @@ export default function Home() {
       )}
 
       {!authenticated ? (
-        <p className="font-display text-lg text-platform-soft">Sign in to start a shared ledger with your group.</p>
+        <section className="max-w-2xl pt-20 pb-16 sm:pt-28 sm:pb-24">
+          <p className="font-mono text-xs uppercase tracking-[0.24em] text-signal">Shared spending, made simple</p>
+          <h2 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
+            Split the cost. Keep the group moving.
+          </h2>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-platform-soft sm:text-xl">
+            Metroly gives trips, apartments, and nights out one shared ledger—then settles everyone with the fewest possible transfers.
+          </p>
+          <button
+            type="button"
+            onClick={login}
+            className="mt-9 bg-signal px-5 py-3 text-sm font-medium text-signal-ink transition-[filter] hover:brightness-95"
+          >
+            Sign in to start
+          </button>
+        </section>
       ) : (
         <>
-          <section className="mb-12">
-            <h2 className="font-display text-lg font-semibold mb-4">Start a group</h2>
-            <form onSubmit={handleCreate} className="space-y-4">
+          <section className="max-w-2xl pt-12 pb-16 sm:pt-20 sm:pb-20">
+            <p className="font-mono text-xs uppercase tracking-[0.24em] text-signal">New ledger</p>
+            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Start a group</h2>
+            <p className="mt-3 max-w-lg text-base leading-7 text-platform-soft sm:text-lg">
+              Set up the group once, add everyone&apos;s wallet, and keep every shared expense in one place.
+            </p>
+            <form onSubmit={handleCreate} className="mt-9 max-w-xl space-y-5">
               <div>
                 <label className="block text-sm text-platform-soft mb-1" htmlFor="name">
                   What&apos;s it for?
@@ -198,7 +242,7 @@ export default function Home() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Lisbon trip"
                   required
-                  className="w-full border border-night-line bg-transparent px-3 py-2 font-display focus:outline-none focus:border-platform"
+                  className="w-full border border-night-line bg-transparent px-3 py-3 text-base font-display focus:outline-none focus:border-platform"
                 />
               </div>
               <div>
@@ -210,7 +254,7 @@ export default function Home() {
                   value={membersInput}
                   onChange={(e) => setMembersInput(e.target.value)}
                   placeholder="0xabc..., 0xdef..."
-                  className="w-full border border-night-line bg-transparent px-3 py-2 font-mono text-sm focus:outline-none focus:border-platform"
+                  className="w-full border border-night-line bg-transparent px-3 py-3 text-base font-mono focus:outline-none focus:border-platform"
                 />
                 <p className="text-xs text-platform-soft mt-1">You ({address?.slice(0, 8)}…) are added automatically.</p>
               </div>
@@ -218,7 +262,7 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={!canCreate}
-                className="bg-signal text-signal-ink px-4 py-2 text-sm font-medium hover:brightness-95 transition-[filter] disabled:opacity-50"
+                className="bg-signal px-5 py-3 text-sm font-medium text-signal-ink hover:brightness-95 transition-[filter] disabled:opacity-50"
               >
                 {creating ? "Creating…" : "Create group"}
               </button>

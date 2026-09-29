@@ -29,6 +29,20 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Optional Privy gas sponsorship
+
+The app defaults to normal wallet-paid transactions. To enable sponsorship
+for Privy embedded wallets, configure and fund a compatible policy in the
+Privy dashboard, then set this Vercel environment variable:
+
+```env
+NEXT_PUBLIC_PRIVY_SPONSOR_TRANSACTIONS=true
+```
+
+External wallets continue to use normal transactions. Leave the variable
+unset or set it to `false` until the Privy policy has been tested on Monad
+Testnet.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

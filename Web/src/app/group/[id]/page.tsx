@@ -5,12 +5,15 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { formatEther, parseEther } from "viem";
+import { encodeFunctionData, formatEther, parseEther, type Hex } from "viem";
+import { useSendTransaction, useWallets } from "@privy-io/react-auth";
 import { useAccount, useBalance, useChainId, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { ConnectButton } from "@/components/ConnectButton";
 import { groupVaultContract, GROUP_VAULT_ADDRESS } from "@/lib/contract";
 import { useKnownGroups } from "@/lib/useKnownGroups";
 import { monadTestnet } from "@/lib/chains";
+
+const sponsorTransactions = process.env.NEXT_PUBLIC_PRIVY_SPONSOR_TRANSACTIONS === "true";
 
 /// Metro-line palette: each member gets a stable color by position, the way
 /// a transit map assigns a line color to a route. Used only as an identity
@@ -52,6 +55,8 @@ export default function GroupPage() {
   const walletBalance = useBalance({ address, chainId: monadTestnet.id, query: { enabled: !!address } });
   const { remember } = useKnownGroups();
   const { writeContractAsync } = useWriteContract();
+  const { sendTransaction } = useSendTransaction();
+  const { wallets } = useWallets();
 
   const notDeployed = GROUP_VAULT_ADDRESS === "0x0000000000000000000000000000000000000000";
   const wrongNetwork = !!address && chainId !== monadTestnet.id;
@@ -62,6 +67,32 @@ export default function GroupPage() {
     query: { enabled: !!address && parsedGroupId !== null && !notDeployed },
   });
   const canTransact = !!address && membership.data === true && !!publicClient && !notDeployed && !wrongNetwork && parsedGroupId !== null;
+
+  async function writeVault(functionName: string, args: readonly unknown[], value?: bigint): Promise<Hex> {
+    const embeddedWallet = address && wallets.some((wallet) =>
+      wallet.address.toLowerCase() === address.toLowerCase() &&
+      (wallet.walletClientType === "privy" || wallet.walletClientType === "privy-v2")
+    );
+    if (sponsorTransactions && embeddedWallet && address) {
+      const data = encodeFunctionData({
+        abi: groupVaultContract.abi,
+        functionName: functionName as never,
+        args: args as never,
+      });
+      const result = await sendTransaction(
+        { to: GROUP_VAULT_ADDRESS, chainId: monadTestnet.id, data, ...(value !== undefined ? { value } : {}) },
+        { sponsor: true, address },
+      );
+      return result.hash;
+    }
+
+    return writeContractAsync({
+      ...groupVaultContract,
+      functionName: functionName as never,
+      args: args as never,
+      ...(value !== undefined ? { value } : {}),
+    });
+  }
 
   useEffect(() => {
     if (parsedGroupId !== null) remember(Number(parsedGroupId));
@@ -170,10 +201,7 @@ export default function GroupPage() {
         <ConnectButton />
       </header>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-platform-soft">
-        <span className="border border-signal/40 px-2 py-1 text-signal">MONAD TESTNET</span>
-        {address && <span>Wallet: {walletBalance.data ? `${formatMon(walletBalance.data.value)} MON` : "loading…"}</span>}
-      </div>
+      {address && <p className="mb-6 text-right text-xs font-mono text-platform-soft">Wallet: {walletBalance.data ? `${formatMon(walletBalance.data.value)} MON` : "loading…"}</p>}
 
       {notDeployed ? (
         <p className="text-debit">This app has not been connected to a deployed vault contract yet.</p>
@@ -315,12 +343,7 @@ export default function GroupPage() {
                 disabled={!canTransact || busy !== null || !depositAmount}
                 onClick={() =>
                   run("deposit", () =>
-                    writeContractAsync({
-                      ...groupVaultContract,
-                      functionName: "deposit",
-                      args: [groupId],
-                      value: parseMonAmount(depositAmount),
-                    })
+                    writeVault("deposit", [groupId], parseMonAmount(depositAmount))
                   )
                 }
                 className="bg-signal text-signal-ink px-4 py-2 text-sm font-medium hover:brightness-95 disabled:opacity-50"
@@ -383,17 +406,13 @@ export default function GroupPage() {
                 disabled={!canTransact || busy !== null || !expenseDesc.trim() || !expenseAmount || !payer || participants.size === 0}
                 onClick={() =>
                   run("expense", () =>
-                    writeContractAsync({
-                      ...groupVaultContract,
-                      functionName: "addExpense",
-                      args: [
-                        groupId,
-                        expenseDesc,
-                        parseMonAmount(expenseAmount),
-                        payer as `0x${string}`,
-                        Array.from(participants) as `0x${string}`[],
-                      ],
-                    })
+                    writeVault("addExpense", [
+                      groupId,
+                      expenseDesc,
+                      parseMonAmount(expenseAmount),
+                      payer as `0x${string}`,
+                      Array.from(participants) as `0x${string}`[],
+                    ])
                   )
                 }
                 className="bg-signal text-signal-ink px-4 py-2 text-sm font-medium hover:brightness-95 disabled:opacity-50"
@@ -407,14 +426,14 @@ export default function GroupPage() {
           <section className="flex gap-3">
             <button
               disabled={!canTransact || busy !== null || !settlementPreview.data?.length}
-              onClick={() => run("settle", () => writeContractAsync({ ...groupVaultContract, functionName: "settle", args: [groupId] }))}
+              onClick={() => run("settle", () => writeVault("settle", [groupId]))}
               className="border border-platform px-4 py-2 text-sm font-medium hover:bg-platform hover:text-night disabled:opacity-50"
             >
               {busy === "settle" ? "Settling…" : "Settle up"}
             </button>
             <button
               disabled={!canTransact || busy !== null || !myWithdrawable.data}
-              onClick={() => run("withdraw", () => writeContractAsync({ ...groupVaultContract, functionName: "withdraw", args: [groupId] }))}
+              onClick={() => run("withdraw", () => writeVault("withdraw", [groupId]))}
               className="border border-platform px-4 py-2 text-sm font-medium hover:bg-platform hover:text-night disabled:opacity-50"
             >
               {busy === "withdraw" ? "Withdrawing…" : "Withdraw"}
@@ -439,11 +458,7 @@ export default function GroupPage() {
                 disabled={!canTransact || busy !== null || !surplusAmount}
                 onClick={() =>
                   run("surplus", () =>
-                    writeContractAsync({
-                      ...groupVaultContract,
-                      functionName: "withdrawSurplus",
-                      args: [groupId, parseMonAmount(surplusAmount)],
-                    })
+                    writeVault("withdrawSurplus", [groupId, parseMonAmount(surplusAmount)])
                   )
                 }
                 className="border border-platform px-4 py-2 text-sm font-medium hover:bg-platform hover:text-night disabled:opacity-50"
