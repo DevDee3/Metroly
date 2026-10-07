@@ -207,6 +207,7 @@ export default function Home() {
       )}
 
       {!authenticated ? (
+        <>
         <section className="grid gap-12 pb-20 pt-10 sm:pb-28 sm:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
           <p className="eyebrow">Shared spending, made simple</p>
@@ -236,6 +237,33 @@ export default function Home() {
             </div>
           </div>
         </section>
+        <section className="grid gap-5 border-t border-night-line py-12 sm:grid-cols-3 sm:py-16">
+          {[
+            ["One shared ledger", "Everyone sees the same expenses, balances, and running total."],
+            ["Less back-and-forth", "Stop chasing screenshots, spreadsheets, and manual IOUs."],
+            ["Clean settlement", "Turn a web of small debts into the fewest possible payments."],
+          ].map(([title, copy]) => (
+            <div key={title} className="surface p-5">
+              <p className="font-display text-lg font-medium">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-platform-soft">{copy}</p>
+            </div>
+          ))}
+        </section>
+        <section className="grid gap-8 border-t border-night-line py-14 sm:grid-cols-[0.8fr_1.2fr] sm:items-center sm:py-20">
+          <div>
+            <p className="eyebrow">The Metroly difference</p>
+            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Fewer payments. Less friction.</h2>
+            <p className="mt-4 text-base leading-7 text-platform-soft">Instead of asking everyone to settle with everyone else, Metroly calculates a simpler route back to zero.</p>
+          </div>
+          <div className="surface p-5 font-mono text-sm sm:p-7">
+            <div className="mb-5 flex items-center justify-between text-xs uppercase tracking-[0.16em] text-platform-soft"><span>Example settlement</span><span className="text-credit">3 → 2 transfers</span></div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-night-line pb-3"><span>Alex <span className="text-platform-soft">→ Sam</span></span><span className="text-debit">0.25 MON</span></div>
+              <div className="flex items-center justify-between"><span>Jordan <span className="text-platform-soft">→ Sam</span></span><span className="text-debit">0.10 MON</span></div>
+            </div>
+          </div>
+        </section>
+        </>
       ) : (
         <>
           <section className="max-w-3xl pb-16 pt-8 sm:pb-20 sm:pt-12">
@@ -287,7 +315,10 @@ export default function Home() {
             <h2 className="font-display text-2xl font-semibold mb-5">Your groups</h2>
             {discovering && <p className="text-xs text-platform-soft mb-3">Finding your groups onchain…</p>}
             {groupIds.length === 0 ? (
-              <p className="text-sm text-platform-soft">No groups yet on this device.</p>
+              <div className="surface max-w-2xl p-6 sm:p-8">
+                <p className="font-display text-lg">Your shared ledgers will appear here.</p>
+                <p className="mt-2 text-sm leading-6 text-platform-soft">Create your first group above, or open a group link someone sent you.</p>
+              </div>
             ) : (
               <ul className="surface divide-y divide-night-line">
                 {groupIds.map((id) => (
