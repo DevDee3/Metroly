@@ -207,7 +207,7 @@ export default function Home() {
       )}
 
       {!authenticated ? (
-        <section className="grid gap-12 pb-20 pt-20 sm:pb-28 sm:pt-28 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+        <section className="grid gap-12 pb-20 pt-10 sm:pb-28 sm:pt-16 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
           <div>
           <p className="eyebrow">Shared spending, made simple</p>
           <h2 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
