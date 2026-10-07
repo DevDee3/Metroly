@@ -193,8 +193,8 @@ export default function GroupPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-6 py-12">
-      <header className="flex items-baseline justify-between border-b border-night-line pb-4 mb-8">
+    <main className="app-shell min-h-screen max-w-5xl mx-auto px-6 py-8 sm:py-12 lg:py-16">
+      <header className="flex items-center justify-between border-b border-night-line pb-5 mb-8">
         <Link href="/" className="font-display text-2xl font-semibold tracking-tight">
           Metroly
         </Link>
@@ -229,9 +229,10 @@ export default function GroupPage() {
         <p className="text-debit">This group doesn&apos;t exist onchain.</p>
       ) : (
         <>
-          <div className="flex items-start justify-between gap-4 mb-8">
+          <div className="surface flex items-start justify-between gap-4 p-6 mb-8 sm:p-8">
             <div>
-              <h1 className="font-display text-xl font-semibold mb-1">{group.data[0]}</h1>
+              <p className="eyebrow mb-3">Shared ledger</p>
+              <h1 className="font-display text-3xl font-semibold tracking-tight mb-1 sm:text-4xl">{group.data[0]}</h1>
               <p className="text-sm text-platform-soft">{members.length} members</p>
             </div>
             <div className="text-right">
@@ -243,9 +244,9 @@ export default function GroupPage() {
           </div>
 
           {/* Balances */}
-          <section className="mb-10">
-            <h2 className="font-display text-lg font-semibold mb-3">Balances</h2>
-            <table className="w-full font-mono text-sm">
+          <section className="surface mb-6 p-5 sm:p-6">
+            <h2 className="font-display text-xl font-semibold mb-4">Balances</h2>
+            <table className="w-full font-mono text-sm sm:text-base">
               <tbody>
                 {members.map((m, i) => {
                   const bal = balances.data?.[1]?.[i] ?? 0n;
@@ -273,8 +274,8 @@ export default function GroupPage() {
           </section>
 
           {/* Expense log */}
-          <section className="mb-10">
-            <h2 className="font-display text-lg font-semibold mb-3">Ledger</h2>
+          <section className="surface mb-6 p-5 sm:p-6">
+            <h2 className="font-display text-xl font-semibold mb-4">Ledger</h2>
             {!expenses.data || expenses.data.length === 0 ? (
               <p className="text-sm text-platform-soft">No expenses logged yet.</p>
             ) : (
@@ -292,23 +293,23 @@ export default function GroupPage() {
           </section>
 
           {/* Your position */}
-          <section className="mb-10 grid gap-4 font-mono text-sm sm:grid-cols-3">
-            <div className="border border-night-line p-3">
+          <section className="mb-6 grid gap-4 font-mono text-sm sm:grid-cols-3">
+            <div className="surface p-4">
               <p className="text-platform-soft mb-1">wallet balance</p>
               <p className="text-lg whitespace-nowrap">{walletBalance.data ? formatMon(walletBalance.data.value) : "—"} MON</p>
             </div>
-            <div className="border border-night-line p-3">
+            <div className="surface p-4">
               <p className="text-platform-soft mb-1">your vault balance</p>
               <p className="text-lg whitespace-nowrap">{myVaultBalance.data !== undefined ? formatMon(myVaultBalance.data) : "—"} MON</p>
             </div>
-            <div className="border border-night-line p-3">
+            <div className="surface p-4">
               <p className="text-platform-soft mb-1">withdrawable</p>
               <p className="text-lg whitespace-nowrap">{myWithdrawable.data !== undefined ? formatMon(myWithdrawable.data) : "—"} MON</p>
             </div>
           </section>
 
-          <section className="mb-10 border border-night-line p-4">
-            <h2 className="font-display text-lg font-semibold mb-3">Next settlement</h2>
+          <section className="surface mb-6 p-5 sm:p-6">
+            <h2 className="font-display text-xl font-semibold mb-4">Next settlement</h2>
             {settlementPreview.isLoading ? (
               <p className="text-sm text-platform-soft">Calculating transfers…</p>
             ) : settlementPreview.data && settlementPreview.data.length > 0 ? (
@@ -329,15 +330,15 @@ export default function GroupPage() {
           {transactionStatus && <p className="text-sm text-platform mb-4">{transactionStatus}</p>}
 
           {/* Deposit */}
-          <section className="mb-10">
-            <h2 className="font-display text-lg font-semibold mb-3">Deposit</h2>
+          <section className="surface mb-6 p-5 sm:p-6">
+            <h2 className="font-display text-xl font-semibold mb-4">Deposit</h2>
             <div className="flex gap-2">
               <input
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
                 placeholder="0.1"
                 inputMode="decimal"
-                className="flex-1 border border-night-line bg-transparent px-3 py-2 font-mono text-sm focus:outline-none focus:border-platform"
+                className="field flex-1 px-3 py-3 font-mono text-sm"
               />
               <button
                 disabled={!canTransact || busy !== null || !depositAmount}
@@ -354,28 +355,28 @@ export default function GroupPage() {
           </section>
 
           {/* Add expense */}
-          <section className="mb-10">
-            <h2 className="font-display text-lg font-semibold mb-3">Log an expense</h2>
+          <section className="surface mb-6 p-5 sm:p-6">
+            <h2 className="font-display text-xl font-semibold mb-4">Log an expense</h2>
             <div className="space-y-3">
               <input
                 value={expenseDesc}
                 onChange={(e) => setExpenseDesc(e.target.value)}
                 placeholder="Dinner"
-                className="w-full border border-night-line bg-transparent px-3 py-2 font-display focus:outline-none focus:border-platform"
+                className="field w-full px-3 py-3 font-display"
               />
               <input
                 value={expenseAmount}
                 onChange={(e) => setExpenseAmount(e.target.value)}
                 placeholder="Amount in MON"
                 inputMode="decimal"
-                className="w-full border border-night-line bg-transparent px-3 py-2 font-mono text-sm focus:outline-none focus:border-platform"
+                className="field w-full px-3 py-3 font-mono text-sm"
               />
               <div>
                 <p className="text-sm text-platform-soft mb-1">Who paid?</p>
                 <select
                   value={payer}
                   onChange={(e) => setPayer(e.target.value)}
-                  className="w-full border border-night-line bg-transparent px-3 py-2 font-mono text-sm focus:outline-none focus:border-platform"
+                  className="field w-full px-3 py-3 font-mono text-sm"
                 >
                   <option value="">select…</option>
                   {members.map((m) => (
@@ -423,7 +424,7 @@ export default function GroupPage() {
           </section>
 
           {/* Settle + withdraw */}
-          <section className="flex gap-3">
+          <section className="surface flex flex-wrap gap-3 p-5 sm:p-6">
             <button
               disabled={!canTransact || busy !== null || !settlementPreview.data?.length}
               onClick={() => run("settle", () => writeVault("settle", [groupId]))}
@@ -440,7 +441,7 @@ export default function GroupPage() {
             </button>
           </section>
 
-          <section className="mt-8 border-t border-night-line pt-6">
+          <section className="surface mt-6 p-5 sm:p-6">
             <h2 className="font-display text-lg font-semibold mb-3">Withdraw unused deposit</h2>
             <p className="text-sm text-platform-soft mb-3">
               Withdraw funds that are not needed for your outstanding share of the ledger.

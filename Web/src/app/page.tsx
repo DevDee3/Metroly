@@ -182,7 +182,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-6 py-8 sm:py-12 lg:py-20">
+    <main className="app-shell min-h-screen max-w-5xl mx-auto px-6 py-8 sm:py-12 lg:py-16">
       <header className="flex items-center justify-between border-b border-night-line pb-5">
         <div className="flex items-center gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight">Metroly</h1>
@@ -207,8 +207,9 @@ export default function Home() {
       )}
 
       {!authenticated ? (
-        <section className="max-w-2xl pt-20 pb-16 sm:pt-28 sm:pb-24">
-          <p className="font-mono text-xs uppercase tracking-[0.24em] text-signal">Shared spending, made simple</p>
+        <section className="grid gap-12 pb-20 pt-20 sm:pb-28 sm:pt-28 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+          <div>
+          <p className="eyebrow">Shared spending, made simple</p>
           <h2 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
             Split the cost. Keep the group moving.
           </h2>
@@ -220,18 +221,30 @@ export default function Home() {
             onClick={login}
             className="mt-9 bg-signal px-5 py-3 text-sm font-medium text-signal-ink transition-[filter] hover:brightness-95"
           >
-            Sign in to start
+            Sign in to start <span className="ml-3">↗</span>
           </button>
+          </div>
+          <div className="surface p-6 sm:p-8">
+            <p className="section-label">How it works</p>
+            <div className="mt-8 space-y-7">
+              {[['01', 'Create a group', 'Add the people sharing the cost.'], ['02', 'Log expenses', 'Everyone sees the same running ledger.'], ['03', 'Settle once', 'The app finds the shortest route home.']].map(([number, title, copy]) => (
+                <div key={number} className="flex gap-4">
+                  <span className="font-mono text-sm text-signal">{number}</span>
+                  <div><p className="font-display text-lg font-medium">{title}</p><p className="mt-1 text-sm leading-6 text-platform-soft">{copy}</p></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       ) : (
         <>
-          <section className="max-w-2xl pt-12 pb-16 sm:pt-20 sm:pb-20">
-            <p className="font-mono text-xs uppercase tracking-[0.24em] text-signal">New ledger</p>
-            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Start a group</h2>
+          <section className="max-w-3xl pb-16 pt-8 sm:pb-20 sm:pt-12">
+            <p className="eyebrow">New ledger</p>
+            <h2 className="mt-4 font-display text-4xl font-semibold tracking-tight sm:text-5xl">Start a group</h2>
             <p className="mt-3 max-w-lg text-base leading-7 text-platform-soft sm:text-lg">
               Set up the group once, add everyone&apos;s wallet, and keep every shared expense in one place.
             </p>
-            <form onSubmit={handleCreate} className="mt-9 max-w-xl space-y-5">
+            <form onSubmit={handleCreate} className="surface mt-9 max-w-2xl space-y-6 p-6 sm:p-8">
               <div>
                 <label className="block text-sm text-platform-soft mb-1" htmlFor="name">
                   What&apos;s it for?
@@ -242,7 +255,7 @@ export default function Home() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Lisbon trip"
                   required
-                  className="w-full border border-night-line bg-transparent px-3 py-3 text-base font-display focus:outline-none focus:border-platform"
+                  className="field w-full px-4 py-3.5 text-base font-display"
                 />
               </div>
               <div>
@@ -254,7 +267,7 @@ export default function Home() {
                   value={membersInput}
                   onChange={(e) => setMembersInput(e.target.value)}
                   placeholder="0xabc..., 0xdef..."
-                  className="w-full border border-night-line bg-transparent px-3 py-3 text-base font-mono focus:outline-none focus:border-platform"
+                  className="field w-full px-4 py-3.5 text-base font-mono"
                 />
                 <p className="text-xs text-platform-soft mt-1">You ({address?.slice(0, 8)}…) are added automatically.</p>
               </div>
@@ -269,16 +282,17 @@ export default function Home() {
             </form>
           </section>
 
-          <section>
-            <h2 className="font-display text-lg font-semibold mb-4">Your groups</h2>
+          <section className="pb-16">
+            <p className="section-label mb-3">Your workspace</p>
+            <h2 className="font-display text-2xl font-semibold mb-5">Your groups</h2>
             {discovering && <p className="text-xs text-platform-soft mb-3">Finding your groups onchain…</p>}
             {groupIds.length === 0 ? (
               <p className="text-sm text-platform-soft">No groups yet on this device.</p>
             ) : (
-              <ul className="divide-y divide-night-line border-t border-b border-night-line">
+              <ul className="surface divide-y divide-night-line">
                 {groupIds.map((id) => (
                   <li key={id}>
-                    <Link href={`/group/${id}`} className="flex justify-between py-3 hover:bg-platform/5 px-1 -mx-1">
+                    <Link href={`/group/${id}`} className="flex justify-between px-5 py-4 transition-colors hover:bg-white/[0.04]">
                       <span className="font-display">Group #{id}</span>
                       <span className="font-mono text-sm text-platform-soft">open</span>
                     </Link>

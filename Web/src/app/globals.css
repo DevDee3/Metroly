@@ -41,6 +41,19 @@ body {
   background-size: 24px 24px;
 }
 
+.app-shell { position: relative; isolation: isolate; }
+.app-shell::before {
+  content: ""; position: fixed; z-index: -1; top: 8rem; right: -10rem;
+  width: 28rem; height: 28rem; border: 1px solid rgb(255 197 61 / 16%);
+  border-radius: 999px; box-shadow: 0 0 0 3rem rgb(255 197 61 / 4%), 0 0 0 7rem rgb(255 197 61 / 2%);
+  pointer-events: none;
+}
+.surface { border: 1px solid var(--night-line); background: rgb(255 255 255 / 4%); box-shadow: 0 24px 70px rgb(0 0 0 / 18%); }
+.field { border: 1px solid var(--night-line); background: rgb(255 255 255 / 3%); transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
+.field:focus { border-color: var(--signal); background: rgb(255 255 255 / 5%); outline: none; box-shadow: 0 0 0 3px rgb(255 197 61 / 10%); }
+.eyebrow { color: var(--signal); font-family: var(--font-mono); font-size: .68rem; letter-spacing: .22em; text-transform: uppercase; }
+.section-label { color: var(--platform-soft); font-family: var(--font-mono); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; }
+
 /* A closed interchange line under a settled total. */
 .map-total {
   border-top: 1px solid var(--night-line);
