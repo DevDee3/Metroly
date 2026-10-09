@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Metroly — split costs, settle instantly",
+  title: "Metroly",
   description: "A shared ledger for groups on Monad. Log an expense, settle up onchain, no IOUs.",
 };
 
