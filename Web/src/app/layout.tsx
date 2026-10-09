@@ -5,6 +5,10 @@ import { Providers } from "./providers";
 export const metadata: Metadata = {
   title: "Metroly",
   description: "A shared ledger for groups on Monad. Log an expense, settle up onchain, no IOUs.",
+  icons: {
+    icon: "/metroly-mark.svg",
+    apple: "/metroly-mark.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
